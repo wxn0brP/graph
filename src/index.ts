@@ -1,38 +1,48 @@
-import { Valthera } from "@wxn0brp/db";
-import FalconFrame from "@wxn0brp/falcon-frame";
-import { $ } from "bun";
-import { getPackageInfo } from "./pkg";
+import * as d3 from "d3";
+import { loadGraph, simulation } from "./load";
 
-const db = new Valthera("data");
-const app = new FalconFrame();
-const scope = "@wxn0brp/";
+// Size
+export const width = window.innerWidth;
+export const height = window.innerHeight - 80;
 
-app.static("public");
-app.static("dist");
+// SVG
+export const svg = d3.select("#graph")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
 
-app.get("/pkg", async () => {
-    const pkgs = await $`all-the-package-names | grep "${scope}"`.text();
-    return pkgs.trim().split("\n").map(name => name.replace(scope, ""));
-});
+// Arrowhead
+const defs = svg.append("defs");
+defs.append("marker")
+    .attr("id", "arrow")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 28)
+    .attr("refY", 0)
+    .attr("markerWidth", 8)
+    .attr("markerHeight", 8)
+    .attr("orient", "auto")
+    .append("path")
+    .attr("d", "M0,-5L10,0L0,5")
+    .attr("fill", "#999");
 
-app.get("/info/:name", async (req) => {
-    const name = req.params.name;
-    const cache = await db.findOne("pkg", { name });
-    if (cache) {
-        delete cache.name;
-        return cache;
+export const g = svg.append("g");
+
+// Zoom
+const zoom = d3.zoom()
+    .scaleExtent([0.2, 5])
+    .on("zoom", (event) => g.attr("transform", event.transform));
+svg.call(zoom);
+
+// Start
+loadGraph();
+
+// Resize
+window.addEventListener("resize", () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight - 80;
+    svg.attr("width", w).attr("height", h);
+    if (simulation) {
+        simulation.force("center", d3.forceCenter(w / 2, h / 2))
+            .alpha(0.3).restart();
     }
-
-    try {
-        const info = await getPackageInfo(scope + name);
-        await db.add("pkg", {
-            name,
-            ...info
-        }, false);
-        return info;
-    } catch {
-        return { err: true }
-    }
 });
-
-app.l(15963);

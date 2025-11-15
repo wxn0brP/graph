@@ -1,5 +1,6 @@
 import * as d3 from "d3";
-import { g, height, width } from "./front";
+import { g, height, width } from ".";
+import { getInfo } from "./api";
 
 export let simulation: d3.Simulation<any, any>;
 
@@ -13,16 +14,7 @@ const color = {
 
 export async function loadGraph() {
     try {
-        const pkgRes = await fetch("/pkg");
-        const packages = await pkgRes.json();
-
-        const infos = await Promise.all(
-            packages.map(async (name) => {
-                const res = await fetch(`/info/${name}`);
-                const info = await res.json();
-                return { name: `@wxn0brp/${name}`, info };
-            })
-        );
+        const infos = await getInfo();
 
         const nodes = new Map();
         const rawLinks = new Map<string, { source: string, target: string, types: Set<string>, versions: Record<string, string> }>();
@@ -38,18 +30,17 @@ export async function loadGraph() {
             const addDep = (deps, type) => {
                 if (!deps) return;
                 Object.keys(deps).forEach(dep => {
-                    if (dep.startsWith("@wxn0brp/")) {
-                        if (!nodes.has(dep)) {
-                            nodes.set(dep, { id: dep, label: dep.split("/")[1] });
-                        }
-                        const key = `${name}→${dep}`;
-                        if (!rawLinks.has(key)) {
-                            rawLinks.set(key, { source: name, target: dep, types: new Set(), versions: {} });
-                        }
-                        const link = rawLinks.get(key);
-                        link.types.add(type);
-                        link.versions[type] = deps[dep];
+                    if (!dep.startsWith("@wxn0brp/")) return;
+                    if (!nodes.has(dep)) {
+                        nodes.set(dep, { id: dep, label: dep.split("/")[1] });
                     }
+                    const key = `${name}→${dep}`;
+                    if (!rawLinks.has(key)) {
+                        rawLinks.set(key, { source: name, target: dep, types: new Set(), versions: {} });
+                    }
+                    const link = rawLinks.get(key);
+                    link.types.add(type);
+                    link.versions[type] = deps[dep];
                 });
             };
 

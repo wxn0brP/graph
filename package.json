@@ -7,17 +7,13 @@
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
-		"build": "bun build src/front.ts --outdir dist --sourcemap --minify",
-		"start": "bun run src/index.ts"
+		"build": "bun build src/index.ts --outdir public --sourcemap --minify"
 	},
 	"devDependencies": {
-		"@types/bun": "*",
 		"typescript": "*"
 	},
 	"dependencies": {
 		"@types/d3": "^7.4.3",
-		"@wxn0brp/db": "^0.40.3",
-		"@wxn0brp/falcon-frame": "^0.5.3",
 		"d3": "^7.9.0"
 	}
 }

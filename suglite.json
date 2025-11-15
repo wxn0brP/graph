@@ -1,8 +1,9 @@
 {
-	"cmd": "tsc --noEmit && bun run build && bun run src/index.ts",
+	"cmd": "tsc --noEmit && bun run build",
 	"watch": [
 		"src"
 	],
+	"server": 15954,
 	"restart_cmd": "clear",
 	"events": {
 		"rs": "clear"
