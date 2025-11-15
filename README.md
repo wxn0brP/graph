@@ -12,11 +12,7 @@ A visualization tool that displays package dependencies of @wxn0brp packages in 
 
 ## Setup
 
+1. `bun install`
 1. `suglite`
 
-Or
-
-1. Install dependencies: `bun install`
-2. Start the server: `bun run start`
-3. Build the frontend: `bun run build`
-4. Open your browser to the displayed URL
+Or use the hosted version: [https://wxn0brp.github.io/graph/](https://wxn0brp.github.io/graph/)
