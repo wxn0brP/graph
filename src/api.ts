@@ -31,6 +31,12 @@ async function _getInfo(): Promise<{ name: string, info: AggregatedDependencies 
     return infos;
 }
 
+export function clearAllCache() {
+    Object.keys(localStorage)
+        .filter(key => key.startsWith(cachePrefix))
+        .forEach(key => localStorage.removeItem(key));
+}
+
 export async function getInfo() {
     return getCache("info", _getInfo);
 }

@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import { loadGraph, simulation } from "./load";
+import { clearAllCache } from "./api";
 
 // Size
 export const width = window.innerWidth;
@@ -35,6 +36,11 @@ svg.call(zoom);
 
 // Start
 loadGraph();
+
+d3.select("#refresh").on("click", () => {
+    clearAllCache();
+    loadGraph();
+});
 
 // Resize
 window.addEventListener("resize", () => {

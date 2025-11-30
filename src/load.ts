@@ -13,6 +13,12 @@ const color = {
 };
 
 export async function loadGraph() {
+    if (simulation) {
+        simulation.stop();
+    }
+    g.selectAll("*").remove();
+    d3.select("body").selectAll(".tooltip").remove();
+
     try {
         const infos = await getInfo();
 
