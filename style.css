@@ -76,6 +76,24 @@ h1 {
     margin-bottom: 10px;
 }
 
+#refresh {
+    background-color: #34495e;
+    color: #ecf0f1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    margin-top: 10px;
+}
+
+#refresh:hover {
+    background-color: #3f5872;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 .legend-color {
     width: 20px;
     height: 4px;
