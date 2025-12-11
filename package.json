@@ -7,7 +7,7 @@
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir public --sourcemap --minify"
+		"build": "bun build src/index.ts src/chart.ts --outdir public/dist --sourcemap --minify --splitting"
 	},
 	"devDependencies": {
 		"typescript": "*"

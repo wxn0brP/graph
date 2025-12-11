@@ -5,5 +5,4 @@ dist
 package-lock.json
 yarn.lock
 bun.lock
-public/index.js
-public/index.js.map
+public/dist

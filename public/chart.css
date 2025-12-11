@@ -1,0 +1,74 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a1a;
+    color: #ecf0f1;
+}
+
+h1,
+h2 {
+    text-align: center;
+    color: #ffffff;
+}
+
+#status {
+    text-align: center;
+    margin: 20px;
+    font-weight: bold;
+    color: #ff9966;
+}
+
+#controls {
+    max-width: 1000px;
+    margin: 20px auto;
+    background: #2d2d2d;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+#packagesList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 5px;
+}
+
+.package-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.package-item input {
+    margin-right: 10px;
+}
+
+.package-item label {
+    cursor: pointer;
+    user-select: none;
+    color: #cccccc;
+}
+
+.package-item input:checked+label {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+#searchBox {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    background: #3d3d3d;
+    border: none;
+    border-radius: 4px;
+    color: #e0e0e0;
+}
+
+#searchBox::placeholder {
+    color: #888;
+}
+
+#downloadsChart {
+    width: 90vw;
+    margin: 20px auto;
+}
