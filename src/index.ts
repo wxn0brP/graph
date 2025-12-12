@@ -52,3 +52,10 @@ window.addEventListener("resize", () => {
             .alpha(0.3).restart();
     }
 });
+
+const menuToggle = document.querySelector("#menu-toggle");
+const legend = document.querySelector(".legend");
+
+menuToggle.addEventListener("click", () => {
+    legend.classList.toggle("hidden");
+});
