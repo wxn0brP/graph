@@ -40,53 +40,14 @@ async function loadData() {
             return;
         }
 
-        statusEl.textContent = `Found ${packages.length} packages. Fetching download stats...`;
+        statusEl.textContent = `Found ${packages.length} packages. Initializing...`;
 
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 60);
-        const range = `${startDate.toISOString().split("T")[0]}:${endDate.toISOString().split("T")[0]}`;
-
-        const weeksSet = new Set<string>();
-
-        for (const pkg of packages) {
-            try {
-                const data = await getCache(pkg, async (range, pkg) => {
-                    const resp = await fetch(`https://api.npmjs.org/downloads/range/${range}/${encodeURIComponent(pkg)}`);
-                    if (!resp.ok) return {};
-                    const data = await resp.json();
-                    return data;
-                }, range, pkg);
-
-                if (!data || !data.downloads || !Array.isArray(data.downloads)) continue;
-
-                const weekly: Record<string, number> = {};
-
-                data.downloads.forEach((point: { day: string, downloads: number }) => {
-                    const date = new Date(point.day);
-                    const weekStart = new Date(date);
-                    weekStart.setDate(date.getDate() - date.getDay() + 1); // Monday start
-                    const weekKey = weekStart.toISOString().split("T")[0];
-                    weekly[weekKey] = (weekly[weekKey] || 0) + point.downloads;
-                    weeksSet.add(weekKey);
-                });
-
-                if (Object.keys(weekly).length > 0) {
-                    const name = pkg.replace("@wxn0brp/", "");
-                    allPackages.push(name);
-                    packageData[name] = { weekly, enabled: preEnabled.includes(name) };
-                }
-            } catch (err) {
-                console.warn(`Error for ${pkg}:`, err);
-            }
-        }
-
-        if (allPackages.length === 0) {
-            statusEl.textContent = "No download data available for any package.";
-            return;
-        }
-
-        allWeeks.push(...Array.from(weeksSet).sort());
+        packages.forEach(pkg => {
+            const name = pkg.replace("@wxn0brp/", "");
+            allPackages.push(name);
+            packageData[name] = { weekly: {}, enabled: preEnabled.includes(name) };
+        });
+        allPackages.sort();
 
         const fragment = document.createDocumentFragment();
         allPackages.forEach(pkg => {
@@ -132,8 +93,63 @@ async function loadData() {
             }
         });
 
+        statusEl.textContent = "Fetching download stats...";
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 60);
+        const range = `${startDate.toISOString().split("T")[0]}:${endDate.toISOString().split("T")[0]}`;
+        const weeksSet = new Set<string>();
+
+        const processSinglePackage = async (pkg: string, shouldUpdateChart: boolean) => {
+            try {
+                const data = await getCache(pkg, async (range, pkg) => {
+                    const resp = await fetch(`https://api.npmjs.org/downloads/range/${range}/${encodeURIComponent(pkg)}`);
+                    if (!resp.ok) return {};
+                    return await resp.json();
+                }, range, pkg);
+
+                if (!data || !data.downloads || !Array.isArray(data.downloads)) return;
+
+                const weekly: Record<string, number> = {};
+                data.downloads.forEach((point: { day: string, downloads: number }) => {
+                    const date = new Date(point.day);
+                    const weekStart = new Date(date);
+                    weekStart.setDate(date.getDate() - date.getDay() + 1); // Monday start
+                    const weekKey = weekStart.toISOString().split("T")[0];
+                    weekly[weekKey] = (weekly[weekKey] || 0) + point.downloads;
+                    weeksSet.add(weekKey);
+                });
+
+                const name = removePrefix(pkg);
+                if (Object.keys(weekly).length > 0) {
+                    packageData[name].weekly = weekly;
+
+                    const newWeeks = Array.from(weeksSet).sort();
+                    if (newWeeks.length > allWeeks.length || newWeeks.some((w, i) => w !== allWeeks[i])) {
+                        allWeeks.length = 0;
+                        allWeeks.push(...newWeeks);
+                    }
+
+                    if (shouldUpdateChart) {
+                        updateChart();
+                    }
+                }
+            } catch (err) {
+                console.warn(`Error for ${pkg}:`, err);
+            }
+        };
+
+        const priorityPackages = packages.filter(p => preEnabled.includes(removePrefix(p)));
+        const otherPackages = packages.filter(p => !preEnabled.includes(removePrefix(p)));
+
+        await Promise.all(priorityPackages.map(p => processSinglePackage(p, true)));
+
         statusEl.textContent = "Ready! Use checkboxes to show/hide packages.";
         statusEl.style.color = "#66ff99";
+
+        for (const pkg of otherPackages) {
+            await processSinglePackage(pkg, false);
+        }
 
     } catch (err: any) {
         console.error(err);
@@ -152,8 +168,14 @@ function createChart() {
 }
 
 function updateChart() {
+    if (!chart) return;
+    chart.data.labels = allWeeks;
     chart.data.datasets = getDatasets();
     chart.update();
+}
+
+function removePrefix(pkg: string) {
+    return pkg.replace("@wxn0brp/", "");
 }
 
 function getDatasets() {
