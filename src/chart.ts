@@ -28,7 +28,7 @@ let preEnabled = [
     "flanker-ui",
 ]
 const params = new URLSearchParams(window.location.search);
-if (params.has("p")) preEnabled = params.get("pre")!.split(",");
+if (params.has("p")) preEnabled = params.get("p")!.split(",");
 
 async function loadData() {
     try {
