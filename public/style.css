@@ -128,7 +128,7 @@ h1 {
     border-radius: 2px;
 }
 
-.legend.hidden {
+.hidden {
     display: none;
 }
 
@@ -151,4 +151,19 @@ h1 {
     display: block;
     margin-bottom: 6px;
     font-size: 14px;
+}
+
+#intervention-notice ul {
+    margin: 5px 0 0 .8rem;
+    list-style: circle;
+    padding: 0;
+}
+
+#intervention-notice li {
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+
+#intervention-notice li:hover {
+    text-decoration: underline;
 }

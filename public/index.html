@@ -20,24 +20,34 @@
 
     <div class="legend">
         <div class="legend-item">
-            <div class="legend-color" style="background:#e74c3c;"></div>
+            <div class="legend-color" style="background:violet;"></div>
             <strong>peer dependencies</strong>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background:#e67e22;"></div>
+            <div class="legend-color" style="background:blue;"></div>
             <strong>optional peer dependencies</strong>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background:#3498db;"></div>
+            <div class="legend-color" style="background:green;"></div>
             <strong>dependencies</strong>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background:#27ae60;"></div>
+            <div class="legend-color" style="background:yellow;"></div>
             <strong>dev dependencies</strong>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:red;"></div>
+            <strong>required intervention</strong>
         </div>
         <a href="chart">chart</a>
         <br>
         <button id="refresh">Refresh</button>
+        <br><br>
+        The following dependencies have
+        <br>
+        minor/major version mismatches:
+        <br>
+        <div id="intervention-notice"></div>
     </div>
 
     <script type="module" src="dist/index.js"></script>

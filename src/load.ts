@@ -3,14 +3,34 @@ import { g, height, width } from ".";
 import { getInfo } from "./api";
 
 export let simulation: d3.Simulation<any, any>;
+export const noticeEl = document.querySelector<HTMLDivElement>("#intervention-notice");
 
 // Color
 const color = {
-    peer: "#e74c3c",
-    opt: "#e67e22",
-    deps: "#3498db",
-    dev: "#27ae60"
+    peer: "violet",
+    opt: "blue",
+    deps: "green",
+    dev: "yellow",
+    req: "red"
 };
+
+function needsIntervention(depVersionSpec: string, latestVersionStr: string): boolean {
+    if (!depVersionSpec || !latestVersionStr) return false;
+    if (depVersionSpec === "*" || depVersionSpec.startsWith("git")) return false;
+
+    const depVersionStr = depVersionSpec.replace(/[\^~>=<]/g, "").trim();
+
+    const depParts = depVersionStr.split(".").map(p => parseInt(p, 10));
+    const latestParts = latestVersionStr.split(".").map(p => parseInt(p, 10));
+
+    const [depMajor = 0, depMinor = 0] = depParts;
+    const [latestMajor = 0, latestMinor = 0] = latestParts;
+
+    if (depMajor !== latestMajor) return true;
+    if (depMinor !== latestMinor) return true;
+
+    return false;
+}
 
 export async function loadGraph() {
     if (simulation) {
@@ -24,11 +44,13 @@ export async function loadGraph() {
 
         const nodes = new Map();
         const rawLinks = new Map<string, { source: string, target: string, types: Set<string>, versions: Record<string, string> }>();
+        const packageVersions = new Map<string, string>();
 
         // Priorytet: peer > opt > deps > dev
         const priority = { peer: 4, opt: 3, deps: 2, dev: 1 };
 
         infos.forEach(({ name, info }) => {
+            packageVersions.set(name, info.version);
             if (!nodes.has(name)) {
                 nodes.set(name, { id: name, label: name.split("/")[1] });
             }
@@ -58,17 +80,47 @@ export async function loadGraph() {
 
         // Reduction: choose the highest priority
         const links = [];
+        const interventions = [];
         rawLinks.forEach(link => {
             const types = Array.from(link.types);
             const bestType = types.reduce((a, b) => priority[a] > priority[b] ? a : b);
+            const versionSpec = link.versions[bestType];
+            const latestVersion = packageVersions.get(link.target);
+            const requiresIntervention = needsIntervention(versionSpec, latestVersion);
+
+            if (requiresIntervention) {
+                interventions.push({
+                    source: link.source,
+                    target: link.target,
+                    versionSpec,
+                    latestVersion
+                });
+            }
+
             links.push({
                 source: link.source,
                 target: link.target,
                 type: bestType,
-                version: link.versions[bestType],
-                allTypes: types.sort((a, b) => priority[b] - priority[a]) // to tooltip
+                version: versionSpec,
+                allTypes: types.sort((a, b) => priority[b] - priority[a]), // to tooltip
+                requiresIntervention
             });
         });
+
+        if (interventions.length > 0) {
+            let content = `<ul>`;
+            interventions.forEach(({ source, target, versionSpec, latestVersion }) => {
+                content += `
+<li title="${versionSpec} -> ${latestVersion}" data-pkg-open="${source}">
+${source.split('/')[1]} -> ${target.split('/')[1]}
+</li>`;
+            });
+            content += `</ul>`;
+
+            noticeEl.innerHTML = content;
+        } else {
+            noticeEl.innerHTML = "No entires";
+        }
 
         const nodeArray = Array.from(nodes.values());
         const linkArray = links;
@@ -88,7 +140,7 @@ export async function loadGraph() {
             .data(linkArray)
             .enter().append("line")
             .attr("class", "link")
-            .attr("stroke", d => color[d.type])
+            .attr("stroke", d => d.requiresIntervention ? color["req"] : color[d.type])
             .attr("stroke-width", 3);
 
         // Edge labels
@@ -168,16 +220,19 @@ export async function loadGraph() {
     }
 }
 
-function dragstarted(event, d) {
+function dragstarted(event: any, d: any) {
     if (!event.active) simulation.alphaTarget(0.3).restart();
-    d.fx = d.x; d.fy = d.y;
+    d.fx = d.x;
+    d.fy = d.y;
 }
 
-function dragged(event, d) {
-    d.fx = event.x; d.fy = event.y;
+function dragged(event: any, d: any) {
+    d.fx = event.x;
+    d.fy = event.y;
 }
 
-function dragended(event, d) {
+function dragended(event: any, d: any) {
     if (!event.active) simulation.alphaTarget(0);
-    d.fx = null; d.fy = null;
+    d.fx = null;
+    d.fy = null;
 }

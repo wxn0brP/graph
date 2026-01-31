@@ -8,6 +8,7 @@ export interface PackageInfo {
 }
 
 export interface AggregatedDependencies {
+    version: string;
     deps: Record<string, string>;
     dev: Record<string, string>;
     opt: Record<string, string>;
@@ -34,6 +35,7 @@ export async function getPackageInfo(npmPackageName: string): Promise<Aggregated
     }
 
     const {
+        version,
         dependencies = {},
         devDependencies = {},
         peerDependencies = {},
@@ -53,6 +55,7 @@ export async function getPackageInfo(npmPackageName: string): Promise<Aggregated
     }
 
     return {
+        version,
         deps: dependencies,
         dev: devDependencies,
         opt,

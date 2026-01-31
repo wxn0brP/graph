@@ -1,10 +1,10 @@
 import * as d3 from "d3";
-import { loadGraph, simulation } from "./load";
 import { clearAllCache } from "./api";
+import { loadGraph, simulation } from "./load";
 
 // Size
 export const width = window.innerWidth;
-export const height = window.innerHeight - 80;
+export const height = window.innerHeight - 10;
 
 // SVG
 export const svg = d3.select("#graph")
@@ -58,4 +58,12 @@ const legend = document.querySelector(".legend");
 
 menuToggle.addEventListener("click", () => {
     legend.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+    const target = e.target as HTMLDivElement;
+    const closet = target.closest("[data-pkg-open]") as HTMLDivElement;
+    if (!closet) return;
+    const pkg = closet.dataset.pkgOpen;
+    window.open(`https://www.npmjs.com/package/${pkg}`, "_blank");
 });
