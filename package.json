@@ -1,19 +1,19 @@
 {
-	"name": "graph",
-	"version": "0.0.1",
-	"main": "src/index.ts",
-	"description": "",
-	"author": "wxn0brP",
-	"license": "MIT",
-	"type": "module",
-	"scripts": {
-		"build": "bun build src/index.ts src/chart.ts --outdir public/dist --sourcemap --minify --splitting"
-	},
-	"devDependencies": {
-		"typescript": "*"
-	},
-	"dependencies": {
-		"@types/d3": "^7.4.3",
-		"d3": "^7.9.0"
-	}
+    "name": "graph",
+    "version": "0.0.1",
+    "main": "src/index.ts",
+    "description": "",
+    "author": "wxn0brP",
+    "license": "MIT",
+    "type": "module",
+    "scripts": {
+        "build": "bun build src/index.ts src/chart.ts --outdir public/dist --sourcemap --minify --splitting"
+    },
+    "devDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@types/d3": "^7.4.3",
+        "d3": "^7.9.0"
+    }
 }
