@@ -5,7 +5,6 @@ import { getInfo } from "./api";
 export let simulation: d3.Simulation<any, any>;
 export const noticeEl = document.querySelector<HTMLDivElement>("#intervention-notice");
 
-// Color
 const color = {
     peer: "violet",
     opt: "blue",
@@ -13,6 +12,29 @@ const color = {
     dev: "yellow",
     req: "red"
 };
+
+interface Node {
+    id: string;
+    label: string;
+    x: number;
+    y: number;
+}
+
+interface Link {
+    source: Node;
+    target: Node;
+    type: string;
+    version: string;
+    allTypes: string[];
+    requiresIntervention: boolean;
+}
+
+interface RawLink {
+    source: Node;
+    target: Node;
+    types: Set<string>;
+    versions: Record<string, string>;
+}
 
 function needsIntervention(depVersionSpec: string, latestVersionStr: string): boolean {
     if (!depVersionSpec || !latestVersionStr) return false;
@@ -43,10 +65,10 @@ export async function loadGraph() {
         const infos = await getInfo();
 
         const nodes = new Map();
-        const rawLinks = new Map<string, { source: string, target: string, types: Set<string>, versions: Record<string, string> }>();
+        const rawLinks = new Map<string, RawLink>();
         const packageVersions = new Map<string, string>();
 
-        // Priorytet: peer > opt > deps > dev
+        // peer > opt > deps > dev
         const priority = { peer: 4, opt: 3, deps: 2, dev: 1 };
 
         infos.forEach(({ name, info }) => {
@@ -55,7 +77,7 @@ export async function loadGraph() {
                 nodes.set(name, { id: name, label: name.split("/")[1] });
             }
 
-            const addDep = (deps, type) => {
+            const addDep = (deps: Record<string, string>, type: string) => {
                 if (!deps) return;
                 Object.keys(deps).forEach(dep => {
                     if (!dep.startsWith("@wxn0brp/")) return;
@@ -64,7 +86,12 @@ export async function loadGraph() {
                     }
                     const key = `${name}→${dep}`;
                     if (!rawLinks.has(key)) {
-                        rawLinks.set(key, { source: name, target: dep, types: new Set(), versions: {} });
+                        rawLinks.set(key, {
+                            source: name,
+                            target: dep as any,
+                            types: new Set(),
+                            versions: {}
+                        });
                     }
                     const link = rawLinks.get(key);
                     link.types.add(type);
@@ -78,14 +105,13 @@ export async function loadGraph() {
             addDep(info.dev, "dev");
         });
 
-        // Reduction: choose the highest priority
-        const links = [];
+        const links: Link[] = [];
         const interventions = [];
         rawLinks.forEach(link => {
             const types = Array.from(link.types);
             const bestType = types.reduce((a, b) => priority[a] > priority[b] ? a : b);
             const versionSpec = link.versions[bestType];
-            const latestVersion = packageVersions.get(link.target);
+            const latestVersion = packageVersions.get(link.target as any);
             const requiresIntervention = needsIntervention(versionSpec, latestVersion);
 
             if (requiresIntervention) {
@@ -123,11 +149,10 @@ ${source.split('/')[1]} -> ${target.split('/')[1]}
         }
 
         const nodeArray = Array.from(nodes.values());
-        const linkArray = links;
 
         // Symbolize with larger force
         simulation = d3.forceSimulation(nodeArray)
-            .force("link", d3.forceLink(linkArray).id((d: any) => d.id).distance(800).strength(1))
+            .force("link", d3.forceLink(links).id((d: any) => d.id).distance(800).strength(1))
             .force("charge", d3.forceManyBody().strength(-22000))
             .force("center", d3.forceCenter(width / 2, height / 2))
             .force("collision", d3.forceCollide().radius(220))
@@ -137,22 +162,20 @@ ${source.split('/')[1]} -> ${target.split('/')[1]}
         // Edges
         const link = g.append("g")
             .selectAll("line")
-            .data(linkArray)
+            .data(links)
             .enter().append("line")
             .attr("class", "link")
             .attr("stroke", d => d.requiresIntervention ? color["req"] : color[d.type])
             .attr("stroke-width", 3);
 
-        // Edge labels
         const linkLabel = g.append("g")
             .selectAll("text")
-            .data(linkArray)
+            .data(links)
             .enter().append("text")
             .attr("class", "link-label")
             .text(d => `${d.type}: ${d.version}`)
             .attr("fill", d => color[d.type]);
 
-        // Edges
         const node = g.append("g")
             .selectAll("g")
             .data(nodeArray)
@@ -161,7 +184,8 @@ ${source.split('/')[1]} -> ${target.split('/')[1]}
             .call(d3.drag()
                 .on("start", dragstarted)
                 .on("drag", dragged)
-                .on("end", dragended));
+                .on("end", dragended)
+            );
 
         node.append("circle")
             .attr("r", 35)
@@ -172,13 +196,14 @@ ${source.split('/')[1]} -> ${target.split('/')[1]}
             .text(d => d.label)
             .attr("y", 6);
 
-        // Tooltip
-        const tooltip = d3.select("body").append("div")
+        const tooltip = d3
+            .select("body")
+            .append("div")
             .attr("class", "tooltip");
 
         node.on("mouseover", (event, d) => {
-            const outgoing = linkArray.filter(l => l.source.id === d.id);
-            const incoming = linkArray.filter(l => l.target.id === d.id);
+            const outgoing = links.filter(l => l.source.id === d.id);
+            const incoming = links.filter(l => l.target.id === d.id);
 
             const depsInfo = outgoing.map(l =>
                 `<div style="color:${color[l.type]}">→ ${l.target.label} <em>(${l.type}: ${l.version})</em></div>`
@@ -214,6 +239,16 @@ ${source.split('/')[1]} -> ${target.split('/')[1]}
             node.attr("transform", d => `translate(${d.x},${d.y})`);
         });
 
+        const nodeDebug = links.map(l => ({
+            source: typeof l.source === "object" ? l.source.id : l.source,
+            target: typeof l.target === "object" ? l.target.id : l.target,
+            type: l.type,
+            version: l.version,
+            allTypes: l.allTypes,
+            requiresIntervention: l.requiresIntervention
+        }));
+        console.log(nodeDebug);
+        console.log(JSON.stringify(nodeDebug));
     } catch (err) {
         console.error("Error:", err);
         alert("Error loading graph");
