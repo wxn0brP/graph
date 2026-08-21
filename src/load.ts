@@ -3,271 +3,323 @@ import { g, height, width } from ".";
 import { getInfo } from "./api";
 
 export let simulation: d3.Simulation<any, any>;
-export const noticeEl = document.querySelector<HTMLDivElement>("#intervention-notice");
+export const noticeEl = document.querySelector<HTMLDivElement>(
+	"#intervention-notice",
+);
 
 const color = {
-    peer: "violet",
-    opt: "blue",
-    deps: "green",
-    dev: "yellow",
-    req: "red"
+	peer: "violet",
+	opt: "blue",
+	deps: "green",
+	dev: "yellow",
+	req: "red",
 };
 
 interface Node {
-    id: string;
-    label: string;
-    x: number;
-    y: number;
+	id: string;
+	label: string;
+	x: number;
+	y: number;
 }
 
 interface Link {
-    source: Node;
-    target: Node;
-    type: string;
-    version: string;
-    allTypes: string[];
-    requiresIntervention: boolean;
+	source: Node;
+	target: Node;
+	type: string;
+	version: string;
+	allTypes: string[];
+	requiresIntervention: boolean;
 }
 
 interface RawLink {
-    source: Node;
-    target: Node;
-    types: Set<string>;
-    versions: Record<string, string>;
+	source: Node;
+	target: Node;
+	types: Set<string>;
+	versions: Record<string, string>;
 }
 
-function needsIntervention(depVersionSpec: string, latestVersionStr: string): boolean {
-    if (!depVersionSpec || !latestVersionStr) return false;
-    if (depVersionSpec === "*" || depVersionSpec.startsWith("git")) return false;
+function needsIntervention(
+	depVersionSpec: string,
+	latestVersionStr: string,
+): boolean {
+	if (!depVersionSpec || !latestVersionStr) return false;
+	if (depVersionSpec === "*" || depVersionSpec.startsWith("git")) return false;
 
-    const depVersionStr = depVersionSpec.replace(/[\^~>=<]/g, "").trim();
+	const depVersionStr = depVersionSpec.replace(/[\^~>=<]/g, "").trim();
 
-    const depParts = depVersionStr.split(".").map(p => parseInt(p, 10));
-    const latestParts = latestVersionStr.split(".").map(p => parseInt(p, 10));
+	const depParts = depVersionStr.split(".").map(p => parseInt(p, 10));
+	const latestParts = latestVersionStr.split(".").map(p => parseInt(p, 10));
 
-    const [depMajor = 0, depMinor = 0] = depParts;
-    const [latestMajor = 0, latestMinor = 0] = latestParts;
+	const [depMajor = 0, depMinor = 0] = depParts;
+	const [latestMajor = 0, latestMinor = 0] = latestParts;
 
-    if (depMajor !== latestMajor) return true;
-    if (depMinor !== latestMinor) return true;
+	if (depMajor !== latestMajor) return true;
+	if (depMinor !== latestMinor) return true;
 
-    return false;
+	return false;
 }
 
 export async function loadGraph() {
-    if (simulation) {
-        simulation.stop();
-    }
-    g.selectAll("*").remove();
-    d3.select("body").selectAll(".tooltip").remove();
+	if (simulation) {
+		simulation.stop();
+	}
+	g.selectAll("*").remove();
+	d3.select("body").selectAll(".tooltip").remove();
 
-    try {
-        const infos = await getInfo();
+	try {
+		const infos = await getInfo();
 
-        const nodes = new Map();
-        const rawLinks = new Map<string, RawLink>();
-        const packageVersions = new Map<string, string>();
+		const nodes = new Map();
+		const rawLinks = new Map<string, RawLink>();
+		const packageVersions = new Map<string, string>();
 
-        // peer > opt > deps > dev
-        const priority = { peer: 4, opt: 3, deps: 2, dev: 1 };
+		// peer > opt > deps > dev
+		const priority = {
+			peer: 4,
+			opt: 3,
+			deps: 2,
+			dev: 1,
+		};
 
-        infos.forEach(({ name, info }) => {
-            packageVersions.set(name, info.version);
-            if (!nodes.has(name)) {
-                nodes.set(name, { id: name, label: name.split("/")[1] });
-            }
+		infos.forEach(({ name, info }) => {
+			packageVersions.set(name, info.version);
+			if (!nodes.has(name)) {
+				nodes.set(name, {
+					id: name,
+					label: name.split("/")[1],
+				});
+			}
 
-            const addDep = (deps: Record<string, string>, type: string) => {
-                if (!deps) return;
-                Object.keys(deps).forEach(dep => {
-                    if (!dep.startsWith("@wxn0brp/")) return;
-                    if (!nodes.has(dep)) {
-                        nodes.set(dep, { id: dep, label: dep.split("/")[1] });
-                    }
-                    const key = `${name}→${dep}`;
-                    if (!rawLinks.has(key)) {
-                        rawLinks.set(key, {
-                            source: name,
-                            target: dep as any,
-                            types: new Set(),
-                            versions: {}
-                        });
-                    }
-                    const link = rawLinks.get(key);
-                    link.types.add(type);
-                    link.versions[type] = deps[dep];
-                });
-            };
+			const addDep = (deps: Record<string, string>, type: string) => {
+				if (!deps) return;
+				Object.keys(deps).forEach(dep => {
+					if (!dep.startsWith("@wxn0brp/")) return;
+					if (!nodes.has(dep)) {
+						nodes.set(dep, {
+							id: dep,
+							label: dep.split("/")[1],
+						});
+					}
+					const key = `${name}→${dep}`;
+					if (!rawLinks.has(key)) {
+						rawLinks.set(key, {
+							source: name,
+							target: dep as any,
+							types: new Set(),
+							versions: {},
+						});
+					}
+					const link = rawLinks.get(key);
+					link.types.add(type);
+					link.versions[type] = deps[dep];
+				});
+			};
 
-            addDep(info.peer, "peer");
-            addDep(info.opt, "opt");
-            addDep(info.deps, "deps");
-            addDep(info.dev, "dev");
-        });
+			addDep(info.peer, "peer");
+			addDep(info.opt, "opt");
+			addDep(info.deps, "deps");
+			addDep(info.dev, "dev");
+		});
 
-        const links: Link[] = [];
-        const interventions = [];
-        rawLinks.forEach(link => {
-            const types = Array.from(link.types);
-            const bestType = types.reduce((a, b) => priority[a] > priority[b] ? a : b);
-            const versionSpec = link.versions[bestType];
-            const latestVersion = packageVersions.get(link.target as any);
-            const requiresIntervention = needsIntervention(versionSpec, latestVersion);
+		const links: Link[] = [];
+		const interventions = [];
+		rawLinks.forEach(link => {
+			const types = Array.from(link.types);
+			const bestType = types.reduce((a, b) =>
+				priority[a] > priority[b] ? a : b,
+			);
+			const versionSpec = link.versions[bestType];
+			const latestVersion = packageVersions.get(link.target as any);
+			const requiresIntervention = needsIntervention(
+				versionSpec,
+				latestVersion,
+			);
 
-            if (requiresIntervention) {
-                interventions.push({
-                    source: link.source,
-                    target: link.target,
-                    versionSpec,
-                    latestVersion
-                });
-            }
+			if (requiresIntervention) {
+				interventions.push({
+					source: link.source,
+					target: link.target,
+					versionSpec,
+					latestVersion,
+				});
+			}
 
-            links.push({
-                source: link.source,
-                target: link.target,
-                type: bestType,
-                version: versionSpec,
-                allTypes: types.sort((a, b) => priority[b] - priority[a]), // to tooltip
-                requiresIntervention
-            });
-        });
+			links.push({
+				source: link.source,
+				target: link.target,
+				type: bestType,
+				version: versionSpec,
+				allTypes: types.sort((a, b) => priority[b] - priority[a]), // to tooltip
+				requiresIntervention,
+			});
+		});
 
-        if (interventions.length > 0) {
-            let content = `<ul>`;
-            interventions.forEach(({ source, target, versionSpec, latestVersion }) => {
-                content += `
+		if (interventions.length > 0) {
+			let content = `<ul>`;
+			interventions.forEach(
+				({ source, target, versionSpec, latestVersion }) => {
+					content += `
 <li title="${versionSpec} -> ${latestVersion}" data-pkg-open="${source}">
-${source.split('/')[1]} -> ${target.split('/')[1]}
+${source.split("/")[1]} -> ${target.split("/")[1]}
 </li>`;
-            });
-            content += `</ul>`;
+				},
+			);
+			content += `</ul>`;
 
-            noticeEl.innerHTML = content;
-        } else {
-            noticeEl.innerHTML = "No entires";
-        }
+			noticeEl.innerHTML = content;
+		} else {
+			noticeEl.innerHTML = "No entires";
+		}
 
-        const nodeArray = Array.from(nodes.values());
+		const nodeArray = Array.from(nodes.values());
 
-        // Symbolize with larger force
-        simulation = d3.forceSimulation(nodeArray)
-            .force("link", d3.forceLink(links).id((d: any) => d.id).distance(800).strength(1))
-            .force("charge", d3.forceManyBody().strength(-22000))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collision", d3.forceCollide().radius(220))
-            .force("x", d3.forceX(width / 2).strength(0.05))
-            .force("y", d3.forceY(height / 2).strength(0.05));
+		// Symbolize with larger force
+		simulation = d3
+			.forceSimulation(nodeArray)
+			.force(
+				"link",
+				d3
+					.forceLink(links)
+					.id((d: any) => d.id)
+					.distance(800)
+					.strength(1),
+			)
+			.force("charge", d3.forceManyBody().strength(-22000))
+			.force("center", d3.forceCenter(width / 2, height / 2))
+			.force("collision", d3.forceCollide().radius(220))
+			.force("x", d3.forceX(width / 2).strength(0.05))
+			.force("y", d3.forceY(height / 2).strength(0.05));
 
-        // Edges
-        const link = g.append("g")
-            .selectAll("line")
-            .data(links)
-            .enter().append("line")
-            .attr("class", "link")
-            .attr("stroke", d => d.requiresIntervention ? color["req"] : color[d.type])
-            .attr("stroke-width", 3);
+		// Edges
+		const link = g
+			.append("g")
+			.selectAll("line")
+			.data(links)
+			.enter()
+			.append("line")
+			.attr("class", "link")
+			.attr("stroke", d =>
+				d.requiresIntervention ? color["req"] : color[d.type],
+			)
+			.attr("stroke-width", 3);
 
-        const linkLabel = g.append("g")
-            .selectAll("text")
-            .data(links)
-            .enter().append("text")
-            .attr("class", "link-label")
-            .text(d => `${d.type}: ${d.version}`)
-            .attr("fill", d => color[d.type]);
+		const linkLabel = g
+			.append("g")
+			.selectAll("text")
+			.data(links)
+			.enter()
+			.append("text")
+			.attr("class", "link-label")
+			.text(d => `${d.type}: ${d.version}`)
+			.attr("fill", d => color[d.type]);
 
-        const node = g.append("g")
-            .selectAll("g")
-            .data(nodeArray)
-            .enter().append("g")
-            .attr("class", "node")
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended)
-            );
+		const node = g
+			.append("g")
+			.selectAll("g")
+			.data(nodeArray)
+			.enter()
+			.append("g")
+			.attr("class", "node")
+			.call(
+				d3
+					.drag()
+					.on("start", dragstarted)
+					.on("drag", dragged)
+					.on("end", dragended),
+			);
 
-        node.append("circle")
-            .attr("r", 35)
-            .attr("fill", "#2c3e50")
-            .attr("stroke", "#ffffff");
+		node
+			.append("circle")
+			.attr("r", 35)
+			.attr("fill", "#2c3e50")
+			.attr("stroke", "#ffffff");
 
-        node.append("text")
-            .text(d => d.label)
-            .attr("y", 6);
+		node
+			.append("text")
+			.text(d => d.label)
+			.attr("y", 6);
 
-        const tooltip = d3
-            .select("body")
-            .append("div")
-            .attr("class", "tooltip");
+		const tooltip = d3.select("body").append("div").attr("class", "tooltip");
 
-        node.on("mouseover", (event, d) => {
-            const outgoing = links.filter(l => l.source.id === d.id);
-            const incoming = links.filter(l => l.target.id === d.id);
+		node
+			.on("mouseover", (event, d) => {
+				const outgoing = links.filter(l => l.source.id === d.id);
+				const incoming = links.filter(l => l.target.id === d.id);
 
-            const depsInfo = outgoing.map(l =>
-                `<div style="color:${color[l.type]}">→ ${l.target.label} <em>(${l.type}: ${l.version})</em></div>`
-            ).join("");
-            const usedByInfo = incoming.map(l =>
-                `<div style="color:${color[l.type]}">← ${l.source.label} <em>(${l.type}: ${l.version})</em></div>`
-            ).join("");
+				const depsInfo = outgoing
+					.map(
+						l =>
+							`<div style="color:${color[l.type]}">→ ${l.target.label} <em>(${l.type}: ${l.version})</em></div>`,
+					)
+					.join("");
+				const usedByInfo = incoming
+					.map(
+						l =>
+							`<div style="color:${color[l.type]}">← ${l.source.label} <em>(${l.type}: ${l.version})</em></div>`,
+					)
+					.join("");
 
-            tooltip.html(`
+				tooltip
+					.html(`
                 <strong>${d.id}</strong>
                 <div style="margin-top:8px; font-size:12px;">
                     ${outgoing.length ? `<div><strong>Dependencies (${outgoing.length}):</strong></div>${depsInfo}` : "<em>No dependencies</em>"}
                     ${incoming.length ? `<div style="margin-top:8px;"><strong>Used by (${incoming.length}):</strong></div>${usedByInfo}` : ""}
                 </div>
-            `).style("opacity", 1);
-        })
-            .on("mousemove", (event) => {
-                tooltip.style("left", (event.pageX + 15) + "px")
-                    .style("top", (event.pageY - 10) + "px");
-            })
-            .on("mouseout", () => tooltip.style("opacity", 0));
+            `)
+					.style("opacity", 1);
+			})
+			.on("mousemove", event => {
+				tooltip
+					.style("left", event.pageX + 15 + "px")
+					.style("top", event.pageY - 10 + "px");
+			})
+			.on("mouseout", () => tooltip.style("opacity", 0));
 
-        // Tick
-        simulation.on("tick", () => {
-            link.attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
+		// Tick
+		simulation.on("tick", () => {
+			link
+				.attr("x1", d => d.source.x)
+				.attr("y1", d => d.source.y)
+				.attr("x2", d => d.target.x)
+				.attr("y2", d => d.target.y);
 
-            linkLabel.attr("x", d => (d.source.x + d.target.x) / 2)
-                .attr("y", d => (d.source.y + d.target.y) / 2);
+			linkLabel
+				.attr("x", d => (d.source.x + d.target.x) / 2)
+				.attr("y", d => (d.source.y + d.target.y) / 2);
 
-            node.attr("transform", d => `translate(${d.x},${d.y})`);
-        });
+			node.attr("transform", d => `translate(${d.x},${d.y})`);
+		});
 
-        const nodeDebug = links.map(l => ({
-            source: typeof l.source === "object" ? l.source.id : l.source,
-            target: typeof l.target === "object" ? l.target.id : l.target,
-            type: l.type,
-            version: l.version,
-            allTypes: l.allTypes,
-            requiresIntervention: l.requiresIntervention
-        }));
-        console.log(nodeDebug);
-        console.log(JSON.stringify(nodeDebug));
-    } catch (err) {
-        console.error("Error:", err);
-        alert("Error loading graph");
-    }
+		const nodeDebug = links.map(l => ({
+			source: typeof l.source === "object" ? l.source.id : l.source,
+			target: typeof l.target === "object" ? l.target.id : l.target,
+			type: l.type,
+			version: l.version,
+			allTypes: l.allTypes,
+			requiresIntervention: l.requiresIntervention,
+		}));
+		console.log(nodeDebug);
+		console.log(JSON.stringify(nodeDebug));
+	} catch (err) {
+		console.error("Error:", err);
+		alert("Error loading graph");
+	}
 }
 
 function dragstarted(event: any, d: any) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
-    d.fx = d.x;
-    d.fy = d.y;
+	if (!event.active) simulation.alphaTarget(0.3).restart();
+	d.fx = d.x;
+	d.fy = d.y;
 }
 
 function dragged(event: any, d: any) {
-    d.fx = event.x;
-    d.fy = event.y;
+	d.fx = event.x;
+	d.fy = event.y;
 }
 
 function dragended(event: any, d: any) {
-    if (!event.active) simulation.alphaTarget(0);
-    d.fx = null;
-    d.fy = null;
+	if (!event.active) simulation.alphaTarget(0);
+	d.fx = null;
+	d.fy = null;
 }

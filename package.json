@@ -10,6 +10,7 @@
         "build": "bun build src/index.ts src/chart.ts --outdir public/dist --sourcemap --minify --splitting"
     },
     "devDependencies": {
+        "@wxn0brp/biome": "*",
         "typescript": "^7"
     },
     "dependencies": {
