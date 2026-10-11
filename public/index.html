@@ -19,22 +19,31 @@
     </button>
 
     <div class="legend">
-        <div class="legend-item">
+        <label class="legend-item">
+            <input type="checkbox" id="filter-peer" data-link-type="peer" checked>
             <div class="legend-color" style="background:violet;"></div>
             <strong>peer dependencies</strong>
-        </div>
-        <div class="legend-item">
+        </label>
+        <label class="legend-item">
+            <input type="checkbox" id="filter-opt" data-link-type="opt" checked>
             <div class="legend-color" style="background:blue;"></div>
             <strong>optional peer dependencies</strong>
-        </div>
-        <div class="legend-item">
+        </label>
+        <label class="legend-item">
+            <input type="checkbox" id="filter-deps" data-link-type="deps" checked>
             <div class="legend-color" style="background:green;"></div>
             <strong>dependencies</strong>
-        </div>
-        <div class="legend-item">
+        </label>
+        <label class="legend-item">
+            <input type="checkbox" id="filter-dev" data-link-type="dev">
             <div class="legend-color" style="background:yellow;"></div>
             <strong>dev dependencies</strong>
-        </div>
+        </label>
+        <label class="legend-item">
+            <input type="checkbox" id="filter-biome">
+            <div class="legend-color" style="background:orange;"></div>
+            <strong>dev deps: biome</strong>
+        </label>
         <div class="legend-item">
             <div class="legend-color" style="background:red;"></div>
             <strong>required intervention</strong>

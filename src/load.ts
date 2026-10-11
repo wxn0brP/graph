@@ -7,6 +7,56 @@ export const noticeEl = document.querySelector<HTMLDivElement>(
 	"#intervention-notice",
 );
 
+// Visibility filter
+export const visibleTypes = new Set<string>([
+	"peer",
+	"opt",
+	"deps",
+]);
+
+const BIOME_HUB = "@wxn0brp/biome";
+export const filters = {
+	biomeDev: false,
+};
+
+function linkTargetId(l: Link) {
+	return typeof l.target === "object" ? l.target.id : (l.target as any);
+}
+
+function isLinkVisible(l: Link) {
+	if (!visibleTypes.has(l.type)) return false;
+	if (!filters.biomeDev && l.type === "dev" && linkTargetId(l) === BIOME_HUB) {
+		return false;
+	}
+	return true;
+}
+
+let currentLinks: d3.Selection<any, any, any, any> | null = null;
+let currentLabels: d3.Selection<any, any, any, any> | null = null;
+let allLinks: Link[] = [];
+
+export function applyLinkFilter() {
+	if (!currentLinks || !currentLabels || !simulation) return;
+
+	const visible = allLinks.filter(isLinkVisible);
+
+	currentLinks.style("display", (d: any) => (isLinkVisible(d) ? null : "none"));
+	currentLabels.style("display", (d: any) =>
+		isLinkVisible(d) ? null : "none",
+	);
+
+	// Rebuild the force with only visible links, so hidden ones stop pulling nodes
+	simulation.force(
+		"link",
+		d3
+			.forceLink(visible)
+			.id((d: any) => d.id)
+			.distance(800)
+			.strength(1),
+	);
+	simulation.alpha(0.3).restart();
+}
+
 const color = {
 	peer: "violet",
 	opt: "blue",
@@ -173,6 +223,8 @@ ${source.split("/")[1]} -> ${target.split("/")[1]}
 
 		const nodeArray = Array.from(nodes.values());
 
+		allLinks = links;
+
 		// Symbolize with larger force
 		simulation = d3
 			.forceSimulation(nodeArray)
@@ -212,7 +264,6 @@ ${source.split("/")[1]} -> ${target.split("/")[1]}
 			.attr("class", "link-label")
 			.text(d => `${d.type}: ${d.version}`)
 			.attr("fill", d => color[d.type]);
-
 		const node = g
 			.append("g")
 			.selectAll("g")
@@ -275,6 +326,10 @@ ${source.split("/")[1]} -> ${target.split("/")[1]}
 					.style("top", event.pageY - 10 + "px");
 			})
 			.on("mouseout", () => tooltip.style("opacity", 0));
+
+		currentLinks = link;
+		currentLabels = linkLabel;
+		applyLinkFilter();
 
 		// Tick
 		simulation.on("tick", () => {

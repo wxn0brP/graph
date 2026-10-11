@@ -1,6 +1,12 @@
 import * as d3 from "d3";
 import { clearAllCache } from "./api";
-import { loadGraph, simulation } from "./load";
+import {
+	applyLinkFilter,
+	filters,
+	loadGraph,
+	simulation,
+	visibleTypes,
+} from "./load";
 
 // Size
 export const width = window.innerWidth;
@@ -46,6 +52,26 @@ loadGraph();
 d3.select("#refresh").on("click", () => {
 	clearAllCache();
 	loadGraph();
+});
+
+// Link type filters
+document.querySelectorAll<HTMLInputElement>("[data-link-type]").forEach(box => {
+	box.addEventListener("change", () => {
+		const type = box.dataset.linkType;
+		if (box.checked) {
+			visibleTypes.add(type);
+		} else {
+			visibleTypes.delete(type);
+		}
+		applyLinkFilter();
+	});
+});
+
+// Biome hub filter
+const biomeBox = document.querySelector<HTMLInputElement>("#filter-biome");
+biomeBox.addEventListener("change", () => {
+	filters.biomeDev = biomeBox.checked;
+	applyLinkFilter();
 });
 
 // Resize
