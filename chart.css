@@ -18,6 +18,28 @@ h2 {
     color: #ff9966;
 }
 
+#status.loading::after {
+    content: '...';
+    display: inline-block;
+    width: 0;
+    overflow: hidden;
+    animation: dots 1.2s steps(4, end) infinite;
+}
+
+body:not(.loading) #status.loading::after {
+    animation: none;
+}
+
+@keyframes dots {
+    0% {
+        width: 0;
+    }
+
+    100% {
+        width: 1.6em;
+    }
+}
+
 #controls {
     max-width: 1000px;
     margin: 20px auto;
@@ -25,6 +47,74 @@ h2 {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    transition: opacity 0.2s;
+}
+
+#controls.disabled {
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+.controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.list-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.list-actions h2 {
+    margin: 0;
+    margin-left: auto;
+    font-size: 1.1em;
+}
+
+button {
+    background: #3d3d3d;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+button:hover {
+    background: #4a4a4a;
+}
+
+.range-btn.active {
+    background: #2c3e50;
+    border-color: #66ff99;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+#controls.collapsed #packagesList,
+#controls.collapsed #searchBox,
+#controls.collapsed .list-actions {
+    display: none;
+}
+
+#panelToggle::before {
+    content: '▾';
+    display: inline-block;
+    margin-right: 6px;
+    transition: transform 0.2s;
+}
+
+#controls.collapsed #panelToggle::before {
+    transform: rotate(-90deg);
 }
 
 #packagesList {
@@ -47,11 +137,28 @@ h2 {
     cursor: pointer;
     user-select: none;
     color: #cccccc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.package-item label::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--c, #888);
+    opacity: 0;
+    transition: opacity 0.15s;
 }
 
 .package-item input:checked+label {
     color: #ffffff;
     font-weight: bold;
+}
+
+.package-item input:checked+label::before {
+    opacity: 1;
 }
 
 #searchBox {
@@ -62,6 +169,7 @@ h2 {
     border: none;
     border-radius: 4px;
     color: #e0e0e0;
+    box-sizing: border-box;
 }
 
 #searchBox::placeholder {
@@ -71,4 +179,19 @@ h2 {
 #downloadsChart {
     width: 90vw;
     margin: 20px auto;
+}
+
+@media (max-width: 768px) {
+    #controls {
+        margin: 10px;
+        padding: 12px;
+    }
+
+    #packagesList {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    #downloadsChart {
+        width: 95vw;
+    }
 }

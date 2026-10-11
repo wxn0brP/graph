@@ -76,6 +76,16 @@ h1 {
     margin-bottom: 10px;
 }
 
+label.legend-item {
+    cursor: pointer;
+}
+
+.legend-item input[type="checkbox"] {
+    margin-right: 10px;
+    accent-color: #ecf0f1;
+    cursor: pointer;
+}
+
 #refresh {
     background-color: #34495e;
     color: #ecf0f1;
